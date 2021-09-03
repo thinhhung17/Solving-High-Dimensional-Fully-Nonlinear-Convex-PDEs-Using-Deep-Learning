@@ -14,5 +14,4 @@ print(z)
 print(g*z)
 print('********************************************************')
 print(tf.linalg.trace(g*z))
-
-def sigma_value(W)
+print("first change")
