@@ -71,7 +71,6 @@ def _one_layer(input_,output_size,activation_fn=tf.nn.relu,stddev=5.0, name='lin
 # print(one)
 
 
-
 def _batch_norm(x,name):
   with tf.compat.v1.variable_scope(name):
     params_shape=[x.get_shape()[-1]]
@@ -87,13 +86,10 @@ def _batch_norm(x,name):
 
 # one=_one_layer(X,n_neuronForGamma[1])
 # print(one)
-print(X)
-two=_one_time_net(X,'two',isgamma=True)
-print(two)
+# print(X)
+# two=_one_time_net(X,'two',isgamma=True)
+# print(two)
 
-
-
-Xinit=np.array([1.0,0.5]*2)
 with tf.Session() as sess:
   dW=tf.random.normal(shape=[batch_size,d],stddev=1,dtype=tf.float64)
   X=tf.Variable(np.ones([batch_size,d]))*Xinit
@@ -127,3 +123,21 @@ with tf.Session() as sess:
   global_step=tf.compat.v1.get_variable('global_step',[],initializer=tf.constant_initializer(0),trainable=False, dtype=tf.int32)
   learning_rate=tf.compat.v1.train.exponential_decay(1.0,global_step,decay_steps=200,decay_rate=0.5,staircase=True)
   trainable_variables=tf.compat.v1.trainable_variables()
+  with tf.GradientTape() as tape:
+    loss=loss
+  grads=tape.gradient(loss,trainable_variables)
+  optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=learning_rate)
+  # apply_op=optimizer.apply_gradients(zip(grads,trainable_variables),global_step=global_step,name='train_step')
+  # train_ops=[apply_op]+ _extra_train_ops
+  # train_op=tf.group(*train_ops)
+
+  # with tf.control_dependencies([train_op]):
+  #   train_op_2=tf.identity(loss,name='train_op2')
+
+  #to save history
+  learning_rates=[]
+  y0_values=[]
+  losses=[]
+  running_time=[]
+  steps=[]
+  sess.run(tf.global_varaibles_initializer())
