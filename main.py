@@ -2,7 +2,7 @@ import tensorflow as tf
 import numpy as np
 import time, datetime
 from tensorflow.python.training import moving_averages
-
+#This is Black-Scholes-Barenblatt Equation problem
 start_time=time.time()
 # tf.reset_default_graph()
 name='BSB'
