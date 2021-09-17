@@ -58,7 +58,7 @@ def _one_time_net(x,name,isgamma=False):
     x_norm=_batch_norm(x,name='layer0_normalization')
     layer1=_one_layer(x_norm,(1-isgamma)*n_neuronForA[1]+isgamma*n_neuronForGamma[1],name='layer1')
     layer2=_one_layer(x_norm,(1-isgamma)*n_neuronForA[2]+isgamma*n_neuronForGamma[2],name='layer2')
-    z=_one_layer(layer2, (1-isgamme)*n_neuronForA[3]+isgamma*n_neuronForGamma[3],activation_fn=None,name='final')
+    z=_one_layer(layer2, (1-isgamma)*n_neuronForA[3]+isgamma*n_neuronForGamma[3],activation_fn=None,name='final')
   return z
 def _one_layer(input_,output_size,activation_fn=tf.nn.relu,stddev=5.0, name='linear'):
   with tf.compat.v1.variable_scope(name):
@@ -78,11 +78,11 @@ def _batch_norm(x,name):
     gamma=tf.compat.v1.get_variable('beta',params_shape,tf.float64,initializer=tf.random_uniform_initializer(0.1,0.5))
     moving_mean=tf.compat.v1.get_variable('moving_mean',params_shape,tf.float64,initializer=tf.constant_initializer(0.0),trainable=False)
     moving_variance=tf.compat.v1.get_variable('moving_variance',params_shape,tf.float64,initializer=tf.constant_initializer(1.0),trainable=False)
-    mean,variance=tf.nn.moments(X,[0],name='moments')
+    mean,variance=tf.nn.moments(x,[0],name='moments')
     _extra_train_ops.append(moving_averages.assign_moving_average(moving_mean,mean,0.99))
     _extra_train_ops.append(moving_averages.assign_moving_average(moving_variance,variance,0.99))
-    y=tf.nn.batch_normalization(X,mean,variance,beta,gamma,1e-6)
-    print(y)
+    y=tf.nn.batch_normalization(x,mean,variance,beta,gamma,1e-6)
+    return y
 
 # one=_one_layer(X,n_neuronForGamma[1])
 # print(one)
@@ -114,7 +114,7 @@ with tf.compat.v1.Session() as sess:
       dW=tf.random.normal(shape=[batch_size,d],stddev=1,dtype=tf.float64)
     #Y update outside of the loop - terminal time step
     dX=mu*X*h+sqrth*sigma*X*dW
-    Y=Y+f_tf((N-1)*h,X,Y,Z,Gamma)*h+tf.math.reduce_sum(Z*dX,1,keep_dims=True)
+    Y=Y+f_tf((N-1)*h,X,Y,Z,Gamma)*h+tf.math.reduce_sum(Z*dX,1,keepdims=True)
     X=X+dX
     loss=tf.reduce_mean(tf.square(Y-g_tf(X)))
 
@@ -167,4 +167,5 @@ output[:,1]=losses
 output[:,2]=y0_values
 output[:,3]=learning_rates
 output[:,4]=running_time
-np.savetxt("./"+str(name) + "_d"+str(d)+"_"+datetime.datetime.now().strftime('%Y-%m-%d-%H:%M;%S')+".csv", output, delimiter=", ", header="step, loss function, Y0, learning rate, running time")      
+print("Result saved at "+str(name) + "_d"+str(d)+"_"+datetime.datetime.now().strftime('%Y-%m-%d-%H:%M;%S')+".csv")
+np.savetxt("./"+str(name) + "_d"+str(d)+"_"+datetime.datetime.now().strftime('%Y-%m-%d-%H:%M;%S')+".csv", output, delimiter=", ", header="step, loss function, Y0, learning rate, running time")
