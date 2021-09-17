@@ -3,6 +3,11 @@ import numpy as np
 import time, datetime
 from tensorflow.python.training import moving_averages
 #This is Black-Scholes-Barenblatt Equation problem
+import time, datetime
+import tensorflow as tf
+import numpy as np
+from tensorflow.python.training import moving_averages
+from tensorflow.keras.models import *
 start_time=time.time()
 # tf.reset_default_graph()
 name='BSB'
@@ -66,11 +71,6 @@ def _one_layer(input_,output_size,activation_fn=tf.nn.relu,stddev=5.0, name='lin
   else:
     return hidden_bn
 
-# print(X.get_shape().as_list)
-# one=_one_layer(X,n_neuronForA[1])
-# print(one)
-
-
 def _batch_norm(x,name):
   with tf.compat.v1.variable_scope(name):
     params_shape=[x.get_shape()[-1]]
@@ -89,8 +89,7 @@ def _batch_norm(x,name):
 # print(X)
 # two=_one_time_net(X,'two',isgamma=True)
 # print(two)
-
-with tf.Session() as sess:
+with tf.compat.v1.Session() as sess:
   dW=tf.random.normal(shape=[batch_size,d],stddev=1,dtype=tf.float64)
   X=tf.Variable(np.ones([batch_size,d]))*Xinit
   Y0=tf.Variable(tf.random.uniform([1], minval=0, maxval=1,dtype=tf.float64),name='Y0')
@@ -103,10 +102,10 @@ with tf.Session() as sess:
   A=tf.matmul(allones,A0)
   Gamma=tf.multiply(tf.ones(shape=[batch_size,d,d],dtype=tf.float64),Gamma0)
 
-  with tf.variable_scope('foward'):
+  with tf.compat.v1.variable_scope('foward', reuse=tf.compat.v1.AUTO_REUSE):
     for t in range(0,N-1):
       dX=mu*X*h+sqrth*sigma*X*dW
-      Y=Y+f_tf(t*h,X,Y<Z,Gamma)*h + tf.math.reduce_sum(Z*dX,1,keepdims=True)
+      Y=Y+f_tf(t*h,X,Y,Z,Gamma)*h + tf.math.reduce_sum(Z*dX,1,keepdims=True)
       X=X+dX
       Z=Z+A*h+tf.squeeze(tf.matmul(Gamma,tf.expand_dims(dX,-1),transpose_b=False))
       A=_one_time_net(X,str(t+1)+"A")/d
@@ -127,17 +126,45 @@ with tf.Session() as sess:
     loss=loss
   grads=tape.gradient(loss,trainable_variables)
   optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=learning_rate)
-  # apply_op=optimizer.apply_gradients(zip(grads,trainable_variables),global_step=global_step,name='train_step')
-  # train_ops=[apply_op]+ _extra_train_ops
-  # train_op=tf.group(*train_ops)
+  apply_op=optimizer.apply_gradients(zip(grads,trainable_variables),global_step=global_step,name='train_step')
+  train_ops=[apply_op]+ _extra_train_ops
+  train_op=tf.group(*train_ops)
 
-  # with tf.control_dependencies([train_op]):
-  #   train_op_2=tf.identity(loss,name='train_op2')
+  with tf.control_dependencies([train_op]):
+    train_op_2=tf.identity(loss,name='train_op2')
 
-  #to save history
+  # to save history
   learning_rates=[]
   y0_values=[]
   losses=[]
   running_time=[]
   steps=[]
   sess.run(tf.global_varaibles_initializer())
+  try:
+    for _ in range(n_maxstep+1):
+      step, y0_value=sess.run([global_step,Y0])
+      currentLoss,currentLearningRate=sess.run([train_op_2,learning_rate])
+      steps.append(step)
+      losses.append((currentLoss))
+      y0_values.append(y0_value)
+      learning_rates.append(currentLearningRate)
+      running_time.append(time.time()-start_time)
+
+      if step% n_displaystep==0:
+        print("step: ", step,
+              "loss: ", currentLoss,
+              " Y0: ", y0_value,
+              " learning rate: ", currentLearningRate)
+    end_time=time.time()
+    print("running time: ", end_time-start_time)
+
+  except KeyboardInterrupt:
+    print("Mannually disengaged")
+#writing results to a csv file
+output=np.zeors((len(y0_values),5))
+output[:,0]=steps
+output[:,1]=losses
+output[:,2]=y0_values
+output[:,3]=learning_rates
+output[:,4]=running_time
+np.savetxt("./"+str(name) + "_d"+str(d)+"_"+datetime.datetime.now().strftime('%Y-%m-%d-%H:%M;%S')+".csv", output, delimiter=", ", header="step, loss function, Y0, learning rate, running time")      
