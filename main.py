@@ -60,6 +60,7 @@ def _one_time_net(x,name,isgamma=False):
     layer2=_one_layer(x_norm,(1-isgamma)*n_neuronForA[2]+isgamma*n_neuronForGamma[2],name='layer2')
     z=_one_layer(layer2, (1-isgamma)*n_neuronForA[3]+isgamma*n_neuronForGamma[3],activation_fn=None,name='final')
   return z
+  # Defining layers
 def _one_layer(input_,output_size,activation_fn=tf.nn.relu,stddev=5.0, name='linear'):
   with tf.compat.v1.variable_scope(name):
     shape=input_.get_shape().as_list()
