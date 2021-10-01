@@ -91,8 +91,9 @@ def _batch_norm(x,name):
 # two=_one_time_net(X,'two',isgamma=True)
 # print(two)
 with tf.compat.v1.Session() as sess:
+    tf.compat.v1.enable_eager_execution()
     dW=tf.random.normal(shape=[batch_size,d],stddev=1,dtype=tf.float64)
-    X=tf.Variable(np.ones([batch_size,d]))*Xinit
+    X=tf.Variable(np.ones([batch_size,d])*Xinit, dtype = tf.float64, trainable=False)
     Y0=tf.Variable(tf.random.uniform([1], minval=0, maxval=1,dtype=tf.float64),name='Y0')
     Z0=tf.Variable(tf.random.uniform([1,d],minval=-0.1,maxval=0.1,dtype=tf.float64),name='Z0')
     Gamma0=tf.Variable(tf.random.uniform([d,d],minval=-1,maxval=1,dtype=tf.float64),name='Gamma0')
@@ -118,14 +119,19 @@ with tf.compat.v1.Session() as sess:
         Y=Y+f_tf((N-1)*h,X,Y,Z,Gamma)*h+tf.math.reduce_sum(Z*dX,1,keepdims=True)
         X=X+dX
         loss=tf.reduce_mean(tf.square(Y-g_tf(X)))
-
+    # def custom_loss(X,Y):
+    #     loss=tf.reduce_mean(tf.square(Y-g_tf(X)))
+    #     return loss
   #training operations
     global_step=tf.compat.v1.get_variable('global_step',[],initializer=tf.constant_initializer(0),trainable=False, dtype=tf.int32)
     learning_rate=tf.compat.v1.train.exponential_decay(1.0,global_step,decay_steps=200,decay_rate=0.5,staircase=True)
     trainable_variables=tf.compat.v1.trainable_variables()
-    with tf.GradientTape() as tape:
-        loss=loss
-    grads=tape.gradient(loss,trainable_variables)
+    #with tf.compat.v1.GradientTape() as tape:
+        #loss=tf.reduce_mean(tf.square(Y-g_tf(X)))
+        # l=loss.numpy()
+        # print(l)
+
+    grads=tf.compat.v1.gradients(loss,trainable_variables)
     optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=learning_rate)
     apply_op=optimizer.apply_gradients(zip(grads,trainable_variables),global_step=global_step,name='train_step')
     train_ops=[apply_op]+ _extra_train_ops
@@ -140,7 +146,7 @@ with tf.compat.v1.Session() as sess:
     losses=[]
     running_time=[]
     steps=[]
-    sess.run(tf.global_varaibles_initializer())
+    sess.run(tf.compat.v1.global_variables_initializer())
     try:
         for _ in range(n_maxstep+1):
             step, y0_value=sess.run([global_step,Y0])
@@ -156,13 +162,13 @@ with tf.compat.v1.Session() as sess:
                     "loss: ", currentLoss,
                     " Y0: ", y0_value,
                     " learning rate: ", currentLearningRate)
-            end_time=time.time()
-            print("running time: ", end_time-start_time)
+                end_time=time.time()
+                print("running time: ", end_time-start_time)
 
     except KeyboardInterrupt:
         print("Mannually disengaged")
 #writing results to a csv file
-output=np.zeors((len(y0_values),5))
+output=np.zeros((len(y0_values),5))
 output[:,0]=steps
 output[:,1]=losses
 output[:,2]=y0_values
