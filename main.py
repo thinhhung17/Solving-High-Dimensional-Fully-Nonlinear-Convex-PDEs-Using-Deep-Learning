@@ -28,11 +28,8 @@ Xinit=np.array([1.0,0.5]*50)
 # print("This is shape of Xinit")
 # print(Xinit)
 # print(Xinit.shape)
-mu=0
-sigma=0.4
-sigma_min=0.1
-sigma_max=0.4
-r=0.05
+mu, sigma, sigma_min, sigma_max, r = 0, 0.4, 0.1, 0.4, 0.05
+
 _extra_train_ops=[]
 def sigma_value(W):
     return sigma_max*tf.cast(tf.greater_equal(W,tf.cast(0,tf.float64)),tf.float64) +\
